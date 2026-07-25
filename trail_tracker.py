@@ -273,11 +273,16 @@ def edit_trail():
 
     # Get trail ID
     try:
-        trail_id = int(input("\nTrail ID to update: "))
+        trail_id = int(input("\nTrail ID to update (0 to cancel): "))
 
     # Validate trail ID
     except ValueError:
         print("Error: Invalid trail ID.")
+        return
+
+    # Cancel
+    if trail_id == 0:
+        print("Update cancelled.")
         return
 
     # Get current trail data
@@ -333,11 +338,16 @@ def edit_hike_log():
 
     # Get log ID
     try:
-        log_id = int(input("\nLog ID to update: "))
+        log_id = int(input("\nLog ID to update (0 to cancel): "))
 
     # Validate log ID
     except ValueError:
         print("Error: Invalid log ID.")
+        return
+
+    # Cancel
+    if log_id == 0:
+        print("Update cancelled.")
         return
 
     # Get current log data
