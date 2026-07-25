@@ -8,159 +8,117 @@ Author: Adam Cottam
 Date: July 2026
 """
 
-import sqlite3
-import os
+# Imports
 from datetime import date
+import db
+from weather import get_weather, PARK_COORDS
 
 
-# --- Database Connection ---
+# --- Display Functions ---
 
-DB_FILE = "trail_tracker.db"
-
-
-def get_connection():
-    """Create and return a database connection with foreign key enforcement."""
-    conn = sqlite3.connect(DB_FILE)
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
-
-
-# --- Table Creation ---
-
-def create_tables(conn):
-    """Create the parks, trails, and hike_logs tables if they don't exist."""
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS parks (
-            park_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            park_name TEXT NOT NULL,
-            state TEXT NOT NULL,
-            region TEXT NOT NULL
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS trails (
-            trail_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            trail_name TEXT NOT NULL,
-            park_id INTEGER NOT NULL,
-            distance_miles REAL NOT NULL,
-            elevation_gain_ft INTEGER NOT NULL,
-            difficulty TEXT NOT NULL CHECK(difficulty IN ('Easy', 'Moderate', 'Hard', 'Expert')),
-            FOREIGN KEY (park_id) REFERENCES parks(park_id)
-        )
-    """)
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS hike_logs (
-            log_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            trail_id INTEGER NOT NULL,
-            hike_date TEXT NOT NULL,
-            duration_hours REAL NOT NULL,
-            rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
-            notes TEXT,
-            FOREIGN KEY (trail_id) REFERENCES trails(trail_id)
-        )
-    """)
-
-    conn.commit()
-    print("Database tables created successfully.")
-
-
-# --- Seed Data ---
-
-def seed_data(conn):
-    """Insert sample parks, trails, and hike logs if tables are empty."""
-    cursor = conn.cursor()
-
-    # Check if data already exists
-    cursor.execute("SELECT COUNT(*) FROM parks")
-    if cursor.fetchone()[0] > 0:
-        print("Database already contains data. Skipping seed.")
+def display_parks(parks: list[dict]):
+    """Display parks in a formatted table."""
+    if not parks:
+        print("No parks found.")
         return
 
-    # Sample parks
-    parks = [
-        ("Zion National Park", "Utah", "Southwest"),
-        ("Yellowstone National Park", "Wyoming", "Northwest"),
-        ("Grand Canyon National Park", "Arizona", "Southwest"),
-        ("Glacier National Park", "Montana", "Northwest"),
-        ("Bryce Canyon National Park", "Utah", "Southwest"),
-    ]
-    cursor.executemany(
-        "INSERT INTO parks (park_name, state, region) VALUES (?, ?, ?)",
-        parks
-    )
-
-    # Sample trails
-    trails = [
-        ("Angels Landing", 1, 5.4, 1488, "Hard"),
-        ("The Narrows", 1, 9.4, 334, "Moderate"),
-        ("Emerald Pools", 1, 3.0, 350, "Easy"),
-        ("Old Faithful Geyser Trail", 2, 1.5, 50, "Easy"),
-        ("Grand Prismatic Overlook", 2, 1.6, 180, "Easy"),
-        ("Bright Angel Trail", 3, 12.0, 4380, "Expert"),
-        ("South Kaibab Trail", 3, 6.3, 2040, "Hard"),
-        ("Highline Trail", 4, 11.8, 890, "Moderate"),
-        ("Grinnell Glacier Trail", 4, 10.6, 1840, "Hard"),
-        ("Navajo Loop Trail", 5, 1.3, 550, "Moderate"),
-    ]
-    cursor.executemany(
-        "INSERT INTO trails (trail_name, park_id, distance_miles, elevation_gain_ft, difficulty) VALUES (?, ?, ?, ?, ?)",
-        trails
-    )
-
-    # Sample hike logs
-    hike_logs = [
-        (1, "2026-03-15", 4.5, 5, "Incredible views from the top. Chains were intense!"),
-        (2, "2026-03-16", 6.0, 4, "Water was cold but beautiful canyon walls."),
-        (3, "2026-03-16", 1.5, 3, "Nice short hike, good for the kids."),
-        (4, "2026-06-10", 0.5, 4, "Old Faithful erupted right on time."),
-        (5, "2026-06-10", 0.75, 5, "The colors were unbelievable from above."),
-        (6, "2026-04-20", 8.0, 5, "Made it to Indian Garden. Tough but rewarding."),
-        (8, "2026-07-01", 5.5, 4, "Wildflowers everywhere. Some snow on trail."),
-        (9, "2026-07-02", 6.0, 5, "Glacier views were stunning. Long but worth it."),
-        (10, "2026-05-18", 1.0, 4, "Hoodoos are amazing. Short but steep."),
-        (1, "2026-06-20", 5.0, 5, "Second time up. Less scary, still amazing."),
-    ]
-    cursor.executemany(
-        "INSERT INTO hike_logs (trail_id, hike_date, duration_hours, rating, notes) VALUES (?, ?, ?, ?, ?)",
-        hike_logs
-    )
-
-    conn.commit()
-    print("Sample data seeded successfully.")
+    print(f"\n{'ID':<4} {'Park Name':<35} {'State':<12} {'Region':<15}")
+    print("-" * 66)
+    for p in parks:
+        print(f"{p['park_id']:<4} {p['park_name']:<35} {p['state']:<12} {p['region']:<15}")
 
 
-# --- INSERT Functions ---
+def display_trails(trails: list[dict]):
+    """Display trails in a formatted table."""
+    if not trails:
+        print("No trails found.")
+        return
 
-def add_park(conn):
-    """Add a new park to the database."""
+    # Check if park_name is in the data
+    if "park_name" in trails[0]:
+        print(f"\n{'ID':<4} {'Trail Name':<25} {'Park':<30} {'Miles':<7} {'Elev':<7} {'Diff':<10}")
+        print("-" * 83)
+        for t in trails:
+            print(f"{t['trail_id']:<4} {t['trail_name']:<25} {t['park_name']:<30} {t['distance_miles']:<7.1f} {t['elevation_gain_ft']:<7} {t['difficulty']:<10}")
+    else:
+        print(f"\n{'ID':<4} {'Trail Name':<25} {'Miles':<7} {'Elev (ft)':<10} {'Difficulty':<10}")
+        print("-" * 56)
+        for t in trails:
+            print(f"{t['trail_id']:<4} {t['trail_name']:<25} {t['distance_miles']:<7.1f} {t['elevation_gain_ft']:<10} {t['difficulty']:<10}")
+
+
+def display_hike_history(hikes: list[dict]):
+    """Display hike logs in a formatted table."""
+    if not hikes:
+        print("No hike logs found.")
+        return
+
+    print(f"\n{'ID':<4} {'Trail':<22} {'Park':<25} {'Date':<12} {'Hours':<6} {'Rating':<7} {'Notes'}")
+    print("-" * 100)
+    for h in hikes:
+        notes = (h['notes'][:30] + "...") if h['notes'] and len(h['notes']) > 30 else (h['notes'] or "")
+        print(f"{h['log_id']:<4} {h['trail_name']:<22} {h['park_name']:<25} {h['hike_date']:<12} {h['duration_hours']:<6.1f} {h['rating']:<7} {notes}")
+
+
+def display_summary_report():
+    """Display summary statistics using JOINs and aggregate functions."""
+    print("\n" + "=" * 60)
+    print("           TRAIL LOG TRACKER - SUMMARY REPORT")
+    print("=" * 60)
+
+    # Hikes Per Park
+    print("\n--- Hikes Per Park ---")
+    park_stats = db.get_hikes_per_park()
+    print(f"{'Park':<35} {'Total Hikes':<13} {'Avg Rating':<10}")
+    print("-" * 58)
+    for row in park_stats:
+        avg = f"{row['avg_rating']}" if row['avg_rating'] else "N/A"
+        print(f"{row['park_name']:<35} {row['total_hikes']:<13} {avg:<10}")
+
+    # Hikes Per Trail
+    print("\n--- Hikes Per Trail ---")
+    trail_stats = db.get_hikes_per_trail()
+    print(f"{'Trail':<22} {'Park':<25} {'Hikes':<7} {'Avg Rate':<9} {'Avg Hrs':<8}")
+    print("-" * 71)
+    for row in trail_stats:
+        print(f"{row['trail_name']:<22} {row['park_name']:<25} {row['total_hikes']:<7} {row['avg_rating']:<9} {row['avg_duration']:<8}")
+
+    # Overall Stats
+    print("\n--- Overall Statistics ---")
+    stats = db.get_overall_stats()
+    print(f"Total parks:  {stats['total_parks']}")
+    print(f"Total trails: {stats['total_trails']}")
+    print(f"Total hikes:  {stats['total_hikes']}")
+    print(f"Total hours:  {stats['total_hours']}")
+    print("=" * 60)
+
+
+# --- Input/Action Functions ---
+
+def add_park():
+    """Prompt user to add a new park."""
     print("\n--- Add New Park ---")
     park_name = input("Park name: ").strip()
     state = input("State: ").strip()
     region = input("Region (e.g., Southwest, Northwest, Southeast): ").strip()
 
+    # Validation
     if not park_name or not state or not region:
         print("Error: All fields are required.")
         return
 
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO parks (park_name, state, region) VALUES (?, ?, ?)",
-        (park_name, state, region)
-    )
-    conn.commit()
-    print(f"Park '{park_name}' added successfully (ID: {cursor.lastrowid}).")
+    # Insert
+    park_id = db.insert_park(park_name, state, region)
+    if park_id:
+        print(f"Park '{park_name}' added successfully (ID: {park_id}).")
 
 
-def add_trail(conn):
-    """Add a new trail to the database."""
+def add_trail():
+    """Prompt user to add a new trail."""
     print("\n--- Add New Trail ---")
 
     # Show available parks
-    list_parks(conn)
+    display_parks(db.get_all_parks())
 
     try:
         park_id = int(input("\nPark ID to add trail to: "))
@@ -187,24 +145,18 @@ def add_trail(conn):
         print("Error: Trail name is required.")
         return
 
-    cursor = conn.cursor()
-    try:
-        cursor.execute(
-            "INSERT INTO trails (trail_name, park_id, distance_miles, elevation_gain_ft, difficulty) VALUES (?, ?, ?, ?, ?)",
-            (trail_name, park_id, distance, elevation, difficulty)
-        )
-        conn.commit()
-        print(f"Trail '{trail_name}' added successfully (ID: {cursor.lastrowid}).")
-    except sqlite3.IntegrityError as e:
-        print(f"Error: {e}. Make sure the park ID exists.")
+    # Insert
+    trail_id = db.insert_trail(trail_name, park_id, distance, elevation, difficulty)
+    if trail_id:
+        print(f"Trail '{trail_name}' added successfully (ID: {trail_id}).")
 
 
-def add_hike_log(conn):
-    """Add a new hike log entry."""
+def add_hike_log():
+    """Prompt user to log a new hike."""
     print("\n--- Log a Hike ---")
 
     # Show available trails
-    list_all_trails(conn)
+    display_trails(db.get_all_trails())
 
     try:
         trail_id = int(input("\nTrail ID: "))
@@ -229,123 +181,16 @@ def add_hike_log(conn):
 
     notes = input("Notes (optional): ").strip()
 
-    cursor = conn.cursor()
-    try:
-        cursor.execute(
-            "INSERT INTO hike_logs (trail_id, hike_date, duration_hours, rating, notes) VALUES (?, ?, ?, ?, ?)",
-            (trail_id, hike_date, duration, rating, notes)
-        )
-        conn.commit()
-        print(f"Hike log added successfully (ID: {cursor.lastrowid}).")
-    except sqlite3.IntegrityError as e:
-        print(f"Error: {e}. Make sure the trail ID exists.")
+    # Insert
+    log_id = db.insert_hike_log(trail_id, hike_date, duration, rating, notes)
+    if log_id:
+        print(f"Hike log added successfully (ID: {log_id}).")
 
 
-# --- SELECT/Query Functions ---
-
-def list_parks(conn):
-    """Display all parks in a formatted table."""
-    cursor = conn.cursor()
-    cursor.execute("SELECT park_id, park_name, state, region FROM parks ORDER BY park_name")
-    rows = cursor.fetchall()
-
-    if not rows:
-        print("No parks found.")
-        return
-
-    print(f"\n{'ID':<4} {'Park Name':<35} {'State':<12} {'Region':<15}")
-    print("-" * 66)
-    for row in rows:
-        print(f"{row[0]:<4} {row[1]:<35} {row[2]:<12} {row[3]:<15}")
-
-
-def list_all_trails(conn):
-    """Display all trails with their park names (JOIN)."""
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT t.trail_id, t.trail_name, p.park_name, t.distance_miles,
-               t.elevation_gain_ft, t.difficulty
-        FROM trails t
-        JOIN parks p ON t.park_id = p.park_id
-        ORDER BY p.park_name, t.trail_name
-    """)
-    rows = cursor.fetchall()
-
-    if not rows:
-        print("No trails found.")
-        return
-
-    print(f"\n{'ID':<4} {'Trail Name':<25} {'Park':<30} {'Miles':<7} {'Elev':<7} {'Diff':<10}")
-    print("-" * 83)
-    for row in rows:
-        print(f"{row[0]:<4} {row[1]:<25} {row[2]:<30} {row[3]:<7.1f} {row[4]:<7} {row[5]:<10}")
-
-
-def list_trails_by_park(conn):
-    """List trails filtered by a specific park."""
-    list_parks(conn)
-
-    try:
-        park_id = int(input("\nEnter Park ID to view trails: "))
-    except ValueError:
-        print("Error: Invalid park ID.")
-        return
-
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT t.trail_id, t.trail_name, t.distance_miles, t.elevation_gain_ft, t.difficulty
-        FROM trails t
-        WHERE t.park_id = ?
-        ORDER BY t.trail_name
-    """, (park_id,))
-    rows = cursor.fetchall()
-
-    if not rows:
-        print("No trails found for that park.")
-        return
-
-    # Get park name
-    cursor.execute("SELECT park_name FROM parks WHERE park_id = ?", (park_id,))
-    park_name = cursor.fetchone()
-    if park_name:
-        print(f"\nTrails in {park_name[0]}:")
-
-    print(f"{'ID':<4} {'Trail Name':<25} {'Miles':<7} {'Elev (ft)':<10} {'Difficulty':<10}")
-    print("-" * 56)
-    for row in rows:
-        print(f"{row[0]:<4} {row[1]:<25} {row[2]:<7.1f} {row[3]:<10} {row[4]:<10}")
-
-
-def view_hike_history(conn):
-    """Display hike log history with trail and park names (JOIN across 3 tables)."""
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT h.log_id, t.trail_name, p.park_name, h.hike_date,
-               h.duration_hours, h.rating, h.notes
-        FROM hike_logs h
-        JOIN trails t ON h.trail_id = t.trail_id
-        JOIN parks p ON t.park_id = p.park_id
-        ORDER BY h.hike_date DESC
-    """)
-    rows = cursor.fetchall()
-
-    if not rows:
-        print("No hike logs found.")
-        return
-
-    print(f"\n{'ID':<4} {'Trail':<22} {'Park':<25} {'Date':<12} {'Hours':<6} {'Rating':<7} {'Notes'}")
-    print("-" * 100)
-    for row in rows:
-        notes = (row[6][:30] + "...") if row[6] and len(row[6]) > 30 else (row[6] or "")
-        print(f"{row[0]:<4} {row[1]:<22} {row[2]:<25} {row[3]:<12} {row[4]:<6.1f} {row[5]:<7} {notes}")
-
-
-# --- UPDATE Functions ---
-
-def update_trail(conn):
-    """Update an existing trail's information."""
+def edit_trail():
+    """Prompt user to update an existing trail."""
     print("\n--- Update Trail ---")
-    list_all_trails(conn)
+    display_trails(db.get_all_trails())
 
     try:
         trail_id = int(input("\nTrail ID to update: "))
@@ -353,27 +198,25 @@ def update_trail(conn):
         print("Error: Invalid trail ID.")
         return
 
-    cursor = conn.cursor()
-    cursor.execute("SELECT trail_name, distance_miles, elevation_gain_ft, difficulty FROM trails WHERE trail_id = ?", (trail_id,))
-    trail = cursor.fetchone()
-
+    # Get current trail data
+    trail = db.get_trail_by_id(trail_id)
     if not trail:
         print("Error: Trail not found.")
         return
 
-    print(f"\nCurrent values: {trail[0]} | {trail[1]} mi | {trail[2]} ft | {trail[3]}")
+    print(f"\nCurrent values: {trail['trail_name']} | {trail['distance_miles']} mi | {trail['elevation_gain_ft']} ft | {trail['difficulty']}")
     print("Press Enter to keep current value.\n")
 
-    trail_name = input(f"Trail name [{trail[0]}]: ").strip() or trail[0]
-    distance_input = input(f"Distance miles [{trail[1]}]: ").strip()
-    elevation_input = input(f"Elevation gain ft [{trail[2]}]: ").strip()
+    trail_name = input(f"Trail name [{trail['trail_name']}]: ").strip() or trail['trail_name']
+    distance_input = input(f"Distance miles [{trail['distance_miles']}]: ").strip()
+    elevation_input = input(f"Elevation gain ft [{trail['elevation_gain_ft']}]: ").strip()
 
     print("Difficulty options: Easy, Moderate, Hard, Expert")
-    difficulty = input(f"Difficulty [{trail[3]}]: ").strip().capitalize() or trail[3]
+    difficulty = input(f"Difficulty [{trail['difficulty']}]: ").strip().capitalize() or trail['difficulty']
 
     try:
-        distance = float(distance_input) if distance_input else trail[1]
-        elevation = int(elevation_input) if elevation_input else trail[2]
+        distance = float(distance_input) if distance_input else trail['distance_miles']
+        elevation = int(elevation_input) if elevation_input else trail['elevation_gain_ft']
     except ValueError:
         print("Error: Invalid number entered.")
         return
@@ -382,19 +225,17 @@ def update_trail(conn):
         print("Error: Invalid difficulty level.")
         return
 
-    cursor.execute("""
-        UPDATE trails
-        SET trail_name = ?, distance_miles = ?, elevation_gain_ft = ?, difficulty = ?
-        WHERE trail_id = ?
-    """, (trail_name, distance, elevation, difficulty, trail_id))
-    conn.commit()
-    print(f"Trail '{trail_name}' updated successfully.")
+    # Update
+    if db.update_trail(trail_id, trail_name, distance, elevation, difficulty):
+        print(f"Trail '{trail_name}' updated successfully.")
+    else:
+        print("Error: Failed to update trail.")
 
 
-def update_hike_log(conn):
-    """Update an existing hike log entry."""
+def edit_hike_log():
+    """Prompt user to update an existing hike log."""
     print("\n--- Update Hike Log ---")
-    view_hike_history(conn)
+    display_hike_history(db.get_hike_history())
 
     try:
         log_id = int(input("\nLog ID to update: "))
@@ -402,27 +243,25 @@ def update_hike_log(conn):
         print("Error: Invalid log ID.")
         return
 
-    cursor = conn.cursor()
-    cursor.execute("SELECT hike_date, duration_hours, rating, notes FROM hike_logs WHERE log_id = ?", (log_id,))
-    log = cursor.fetchone()
-
+    # Get current log data
+    log = db.get_hike_log_by_id(log_id)
     if not log:
         print("Error: Hike log not found.")
         return
 
-    print(f"\nCurrent: Date={log[0]} | Duration={log[1]}h | Rating={log[2]} | Notes={log[3]}")
+    print(f"\nCurrent: Date={log['hike_date']} | Duration={log['duration_hours']}h | Rating={log['rating']} | Notes={log['notes']}")
     print("Press Enter to keep current value.\n")
 
-    hike_date = input(f"Date [{log[0]}]: ").strip() or log[0]
-    duration_input = input(f"Duration hours [{log[1]}]: ").strip()
-    rating_input = input(f"Rating 1-5 [{log[2]}]: ").strip()
-    notes = input(f"Notes [{log[3]}]: ").strip()
+    hike_date = input(f"Date [{log['hike_date']}]: ").strip() or log['hike_date']
+    duration_input = input(f"Duration hours [{log['duration_hours']}]: ").strip()
+    rating_input = input(f"Rating 1-5 [{log['rating']}]: ").strip()
+    notes = input(f"Notes [{log['notes']}]: ").strip()
     if not notes:
-        notes = log[3]
+        notes = log['notes']
 
     try:
-        duration = float(duration_input) if duration_input else log[1]
-        rating = int(rating_input) if rating_input else log[2]
+        duration = float(duration_input) if duration_input else log['duration_hours']
+        rating = int(rating_input) if rating_input else log['rating']
     except ValueError:
         print("Error: Invalid number entered.")
         return
@@ -431,21 +270,17 @@ def update_hike_log(conn):
         print("Error: Rating must be between 1 and 5.")
         return
 
-    cursor.execute("""
-        UPDATE hike_logs
-        SET hike_date = ?, duration_hours = ?, rating = ?, notes = ?
-        WHERE log_id = ?
-    """, (hike_date, duration, rating, notes, log_id))
-    conn.commit()
-    print("Hike log updated successfully.")
+    # Update
+    if db.update_hike_log(log_id, hike_date, duration, rating, notes):
+        print("Hike log updated successfully.")
+    else:
+        print("Error: Failed to update hike log.")
 
 
-# --- DELETE Functions ---
-
-def delete_trail(conn):
-    """Delete a trail from the database."""
+def remove_trail():
+    """Prompt user to delete a trail."""
     print("\n--- Delete Trail ---")
-    list_all_trails(conn)
+    display_trails(db.get_all_trails())
 
     try:
         trail_id = int(input("\nTrail ID to delete: "))
@@ -453,34 +288,37 @@ def delete_trail(conn):
         print("Error: Invalid trail ID.")
         return
 
-    cursor = conn.cursor()
-    cursor.execute("SELECT trail_name FROM trails WHERE trail_id = ?", (trail_id,))
-    trail = cursor.fetchone()
-
+    # Get trail info
+    trail = db.get_trail_by_id(trail_id)
     if not trail:
         print("Error: Trail not found.")
         return
 
     # Check for existing hike logs
-    cursor.execute("SELECT COUNT(*) FROM hike_logs WHERE trail_id = ?", (trail_id,))
-    log_count = cursor.fetchone()[0]
-
+    log_count = db.get_hike_log_count_for_trail(trail_id)
     if log_count > 0:
-        confirm = input(f"Warning: '{trail[0]}' has {log_count} hike log(s). Delete trail AND logs? (yes/no): ").strip().lower()
+        confirm = input(f"Warning: '{trail['trail_name']}' has {log_count} hike log(s). Delete trail AND logs? (yes/no): ").strip().lower()
         if confirm != "yes":
             print("Delete cancelled.")
             return
-        cursor.execute("DELETE FROM hike_logs WHERE trail_id = ?", (trail_id,))
+    else:
+        confirm = input(f"Delete trail '{trail['trail_name']}'? (yes/no): ").strip().lower()
+        if confirm != "yes":
+            print("Delete cancelled.")
+            return
 
-    cursor.execute("DELETE FROM trails WHERE trail_id = ?", (trail_id,))
-    conn.commit()
-    print(f"Trail '{trail[0]}' deleted successfully.")
+    # Delete
+    if db.delete_trail(trail_id):
+        print(f"Trail '{trail['trail_name']}' deleted successfully.")
+    else:
+        print("Error: Failed to delete trail.")
 
 
-def delete_hike_log(conn):
-    """Delete a hike log entry."""
+def remove_hike_log():
+    """Prompt user to delete a hike log."""
     print("\n--- Delete Hike Log ---")
-    view_hike_history(conn)
+    hikes = db.get_hike_history()
+    display_hike_history(hikes)
 
     try:
         log_id = int(input("\nLog ID to delete: "))
@@ -488,93 +326,99 @@ def delete_hike_log(conn):
         print("Error: Invalid log ID.")
         return
 
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT h.log_id, t.trail_name, h.hike_date
-        FROM hike_logs h JOIN trails t ON h.trail_id = t.trail_id
-        WHERE h.log_id = ?
-    """, (log_id,))
-    log = cursor.fetchone()
-
+    # Find the log in our results for display
+    log = next((h for h in hikes if h['log_id'] == log_id), None)
     if not log:
         print("Error: Hike log not found.")
         return
 
-    confirm = input(f"Delete log for '{log[1]}' on {log[2]}? (yes/no): ").strip().lower()
+    confirm = input(f"Delete log for '{log['trail_name']}' on {log['hike_date']}? (yes/no): ").strip().lower()
     if confirm != "yes":
         print("Delete cancelled.")
         return
 
-    cursor.execute("DELETE FROM hike_logs WHERE log_id = ?", (log_id,))
-    conn.commit()
-    print("Hike log deleted successfully.")
+    # Delete
+    if db.delete_hike_log(log_id):
+        print("Hike log deleted successfully.")
+    else:
+        print("Error: Failed to delete hike log.")
 
 
-# --- JOIN/Summary Reports ---
+def view_trails_by_park():
+    """Prompt user to select a park, then display its trails."""
+    display_parks(db.get_all_parks())
 
-def summary_report(conn):
-    """Display summary statistics using JOINs and aggregate functions."""
-    cursor = conn.cursor()
+    try:
+        park_id = int(input("\nEnter Park ID to view trails: "))
+    except ValueError:
+        print("Error: Invalid park ID.")
+        return
 
-    print("\n" + "=" * 60)
-    print("           TRAIL LOG TRACKER - SUMMARY REPORT")
-    print("=" * 60)
+    # Get park name
+    park_name = db.get_park_name(park_id)
+    if park_name:
+        print(f"\nTrails in {park_name}:")
 
-    # Total hikes per park (JOIN + GROUP BY + COUNT)
-    print("\n--- Hikes Per Park ---")
-    cursor.execute("""
-        SELECT p.park_name, COUNT(h.log_id) AS total_hikes,
-               ROUND(AVG(h.rating), 1) AS avg_rating
-        FROM parks p
-        LEFT JOIN trails t ON p.park_id = t.park_id
-        LEFT JOIN hike_logs h ON t.trail_id = h.trail_id
-        GROUP BY p.park_id
-        ORDER BY total_hikes DESC
-    """)
-    rows = cursor.fetchall()
+    # Get and display trails
+    trails = db.get_trails_by_park(park_id)
+    display_trails(trails)
 
-    print(f"{'Park':<35} {'Total Hikes':<13} {'Avg Rating':<10}")
-    print("-" * 58)
-    for row in rows:
-        avg = f"{row[2]}" if row[2] else "N/A"
-        print(f"{row[0]:<35} {row[1]:<13} {avg:<10}")
 
-    # Total hikes per trail (JOIN + GROUP BY + COUNT)
-    print("\n--- Hikes Per Trail ---")
-    cursor.execute("""
-        SELECT t.trail_name, p.park_name, COUNT(h.log_id) AS total_hikes,
-               ROUND(AVG(h.rating), 1) AS avg_rating,
-               ROUND(AVG(h.duration_hours), 1) AS avg_duration
-        FROM trails t
-        JOIN parks p ON t.park_id = p.park_id
-        LEFT JOIN hike_logs h ON t.trail_id = h.trail_id
-        GROUP BY t.trail_id
-        HAVING COUNT(h.log_id) > 0
-        ORDER BY total_hikes DESC
-    """)
-    rows = cursor.fetchall()
+# --- Weather Functions ---
 
-    print(f"{'Trail':<22} {'Park':<25} {'Hikes':<7} {'Avg Rate':<9} {'Avg Hrs':<8}")
-    print("-" * 71)
-    for row in rows:
-        print(f"{row[0]:<22} {row[1]:<25} {row[2]:<7} {row[3]:<9} {row[4]:<8}")
+def show_weather():
+    """Prompt user to select a park and display current weather."""
+    print("\n--- Park Weather Lookup ---")
 
-    # Overall stats
-    print("\n--- Overall Statistics ---")
-    cursor.execute("SELECT COUNT(*) FROM hike_logs")
-    total_hikes = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM parks")
-    total_parks = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM trails")
-    total_trails = cursor.fetchone()[0]
-    cursor.execute("SELECT ROUND(SUM(duration_hours), 1) FROM hike_logs")
-    total_hours = cursor.fetchone()[0] or 0
+    # Show available parks
+    parks = db.get_all_parks()
+    display_parks(parks)
 
-    print(f"Total parks:  {total_parks}")
-    print(f"Total trails: {total_trails}")
-    print(f"Total hikes:  {total_hikes}")
-    print(f"Total hours:  {total_hours}")
-    print("=" * 60)
+    try:
+        park_id = int(input("\nEnter Park ID for weather: "))
+    except ValueError:
+        print("Error: Invalid park ID.")
+        return
+
+    # Get park name
+    park_name = db.get_park_name(park_id)
+    if not park_name:
+        print("Error: Park not found.")
+        return
+
+    # Check if coordinates are available
+    if park_name not in PARK_COORDS:
+        print(f"Error: No coordinates available for '{park_name}'.")
+        print("Add coordinates to PARK_COORDS in weather.py.")
+        return
+
+    # Fetch weather
+    try:
+        weather = get_weather(park_name)
+    except Exception as e:
+        print(f"Error fetching weather: {e}")
+        return
+
+    # Display weather
+    print(f"\n{'=' * 50}")
+    print(f"  Weather for {weather['park_name']}")
+    print(f"{'=' * 50}")
+    print(f"  Conditions:   {weather['description']}")
+    print(f"  Temperature:  {weather['temp_f']:.1f}°F")
+    print(f"  Humidity:     {weather['humidity']:.0f}%")
+    print(f"  Wind Speed:   {weather['wind_mph']:.1f} mph")
+
+    # Wind Chill (if applicable)
+    if weather['wind_chill_f'] is not None:
+        print(f"  Wind Chill:   {weather['wind_chill_f']:.1f}°F")
+
+    # Heat Index (if applicable)
+    if weather['heat_index_f'] is not None:
+        print(f"  Heat Index:   {weather['heat_index_f']:.1f}°F")
+
+    print(f"  Coordinates:  {weather['lat']}, {weather['lon']}")
+    print(f"  Retrieved:    {weather['timestamp_utc']} UTC")
+    print(f"{'=' * 50}")
 
 
 # --- Menu System ---
@@ -596,6 +440,7 @@ def main_menu():
     print(" 10. Delete Trail")
     print(" 11. Delete Hike Log")
     print(" 12. Summary Report")
+    print(" 13. Park Weather")
     print("  0. Exit")
     print("-" * 40)
     return input("Choose an option: ").strip()
@@ -603,46 +448,45 @@ def main_menu():
 
 def main():
     """Main application entry point."""
-    # Create database and tables
-    conn = get_connection()
-    create_tables(conn)
-    seed_data(conn)
+    # Initialize database and seed data
+    db.create_database()
+    db.seed_data()
 
     # Main loop
     while True:
         choice = main_menu()
 
         if choice == "1":
-            list_parks(conn)
+            display_parks(db.get_all_parks())
         elif choice == "2":
-            list_all_trails(conn)
+            display_trails(db.get_all_trails())
         elif choice == "3":
-            list_trails_by_park(conn)
+            view_trails_by_park()
         elif choice == "4":
-            view_hike_history(conn)
+            display_hike_history(db.get_hike_history())
         elif choice == "5":
-            add_park(conn)
+            add_park()
         elif choice == "6":
-            add_trail(conn)
+            add_trail()
         elif choice == "7":
-            add_hike_log(conn)
+            add_hike_log()
         elif choice == "8":
-            update_trail(conn)
+            edit_trail()
         elif choice == "9":
-            update_hike_log(conn)
+            edit_hike_log()
         elif choice == "10":
-            delete_trail(conn)
+            remove_trail()
         elif choice == "11":
-            delete_hike_log(conn)
+            remove_hike_log()
         elif choice == "12":
-            summary_report(conn)
+            display_summary_report()
+        elif choice == "13":
+            show_weather()
         elif choice == "0":
             print("\nHappy trails! Goodbye.")
             break
         else:
             print("Invalid option. Please try again.")
-
-    conn.close()
 
 
 if __name__ == "__main__":
