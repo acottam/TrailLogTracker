@@ -26,12 +26,12 @@ def display_parks(parks: list[dict]):
         return
 
     # Check if park_name is in the data
-    print(f"\n{'ID':<4} {'Park Name':<45} {'State':<15} {'Region':<15}")
-    print("-" * 79)
+    print(f"\n{'ID':<4} {'Park Name':<50} {'State':<15} {'Region':<15}")
+    print("-" * 84)
 
     # Display each park's stats with formatted averages
     for p in parks:
-        print(f"{p['park_id']:<4} {p['park_name']:<45} {p['state']:<15} {p['region']:<15}")
+        print(f"{p['park_id']:<4} {p['park_name']:<50} {p['state']:<15} {p['region']:<15}")
 
 
 def display_trails(trails: list[dict]):
@@ -47,10 +47,10 @@ def display_trails(trails: list[dict]):
 
     # Check if park_name is in the data
     if "park_name" in trails[0]:
-        print(f"\n{'ID':<4} {'Trail Name':<25} {'Park':<45} {'Miles':<7} {'Elev':<7} {'Diff':<10}")
-        print("-" * 98)
+        print(f"\n{'ID':<4} {'Trail Name':<25} {'Park':<50} {'Miles':<7} {'Elev':<7} {'Diff':<10}")
+        print("-" * 103)
         for t in trails:
-            print(f"{t['trail_id']:<4} {t['trail_name']:<25} {t['park_name']:<45} {t['distance_miles']:<7.1f} {t['elevation_gain_ft']:<7} {t['difficulty']:<10}")
+            print(f"{t['trail_id']:<4} {t['trail_name']:<25} {t['park_name']:<50} {t['distance_miles']:<7.1f} {t['elevation_gain_ft']:<7} {t['difficulty']:<10}")
 
     # If park_name is not in the data, display without it
     else:
@@ -72,13 +72,13 @@ def display_hike_history(hikes: list[dict]):
         return
 
     # Check if park_name is in the data
-    print(f"\n{'ID':<4} {'Trail':<22} {'Park':<45} {'Date':<12} {'Hours':<6} {'Rating':<7} {'Notes'}")
-    print("-" * 120)
+    print(f"\n{'ID':<4} {'Trail':<22} {'Park':<50} {'Date':<12} {'Hours':<6} {'Rating':<7} {'Notes'}")
+    print("-" * 125)
 
     # Display each hike log with truncated notes if necessary
     for h in hikes:
         notes = (h['notes'][:30] + "...") if h['notes'] and len(h['notes']) > 30 else (h['notes'] or "")
-        print(f"{h['log_id']:<4} {h['trail_name']:<22} {h['park_name']:<45} {h['hike_date']:<12} {h['duration_hours']:<6.1f} {h['rating']:<7} {notes}")
+        print(f"{h['log_id']:<4} {h['trail_name']:<22} {h['park_name']:<50} {h['hike_date']:<12} {h['duration_hours']:<6.1f} {h['rating']:<7} {notes}")
 
 
 def display_summary_report():
@@ -93,23 +93,23 @@ def display_summary_report():
     # Hikes Per Park
     print("\n--- Hikes Per Park ---")
     park_stats = db.get_hikes_per_park()
-    print(f"{'Park':<45} {'Total Hikes':<13} {'Avg Rating':<10}")
-    print("-" * 68)
+    print(f"{'Park':<50} {'Total Hikes':<13} {'Avg Rating':<10}")
+    print("-" * 73)
 
     # Display each park's stats with formatted averages
     for row in park_stats:
         avg = f"{row['avg_rating']}" if row['avg_rating'] else "N/A"
-        print(f"{row['park_name']:<45} {row['total_hikes']:<13} {avg:<10}")
+        print(f"{row['park_name']:<50} {row['total_hikes']:<13} {avg:<10}")
 
     # Hikes Per Trail
     print("\n--- Hikes Per Trail ---")
     trail_stats = db.get_hikes_per_trail()
-    print(f"{'Trail':<22} {'Park':<45} {'Hikes':<7} {'Avg Rate':<9} {'Avg Hrs':<8}")
-    print("-" * 91)
+    print(f"{'Trail':<22} {'Park':<50} {'Hikes':<7} {'Avg Rate':<9} {'Avg Hrs':<8}")
+    print("-" * 96)
 
     # Display each trail's stats with formatted averages
     for row in trail_stats:
-        print(f"{row['trail_name']:<22} {row['park_name']:<45} {row['total_hikes']:<7} {row['avg_rating']:<9} {row['avg_duration']:<8}")
+        print(f"{row['trail_name']:<22} {row['park_name']:<50} {row['total_hikes']:<7} {row['avg_rating']:<9} {row['avg_duration']:<8}")
 
     # Overall Stats
     print("\n--- Overall Statistics ---")
