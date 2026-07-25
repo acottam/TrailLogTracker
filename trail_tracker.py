@@ -133,7 +133,13 @@ def add_park():
     If the park name already exists, inform the user.
     """
     print("\n--- Add New Park ---")
+    print("Enter 0 to cancel.\n")
     park_name = input("Park name: ").strip()
+
+    # Cancel
+    if park_name == "0":
+        print("Add cancelled.")
+        return
     state = input("State: ").strip()
     region = input("Region (e.g., Southwest, Northwest, Southeast): ").strip()
 
@@ -174,11 +180,16 @@ def add_trail():
 
     # Get park ID with validation
     try:
-        park_id = int(input("\nPark ID to add trail to: "))
+        park_id = int(input("\nPark ID to add trail to (0 to cancel): "))
 
     # Validate park ID
     except ValueError:
         print("Error: Invalid park ID.")
+        return
+
+    # Cancel
+    if park_id == 0:
+        print("Add cancelled.")
         return
 
     trail_name = input("Trail name: ").strip()
@@ -225,11 +236,16 @@ def add_hike_log():
 
     # Get trail ID
     try:
-        trail_id = int(input("\nTrail ID: "))
+        trail_id = int(input("\nTrail ID (0 to cancel): "))
 
     # Validate trail ID
     except ValueError:
         print("Error: Invalid trail ID.")
+        return
+
+    # Cancel
+    if trail_id == 0:
+        print("Add cancelled.")
         return
 
     # Get hike date (default to today)
