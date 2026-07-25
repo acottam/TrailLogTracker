@@ -778,8 +778,12 @@ def main():
     Initializes the database, loads data, and starts the main menu loop.
     """
     # Initialize database and load data from CSV
-    db.create_database()
-    db.import_trails_from_csv()
+    # Initialize database — only load CSV on first run
+    if not db.DB_PATH.exists():
+        db.create_database()
+        db.import_trails_from_csv()
+    else:
+        db.create_database()  # Ensures tables exist if DB was manually created
 
     # Main loop
     while True:
