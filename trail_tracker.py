@@ -9,9 +9,25 @@ Date: July 2026
 """
 
 # Imports
+import os
+import platform
 from datetime import date
 import db
 from weather import get_weather
+
+
+# --- Utility Functions ---
+
+def clear_screen():
+    """
+    Clear the terminal screen.
+    Parameters: none
+    Return: none
+    """
+    if platform.system() == "Windows":
+        os.system("cls")
+    else:
+        os.system("clear")
 
 
 # --- Display Functions ---
@@ -673,38 +689,57 @@ def main():
         choice = main_menu()
 
         if choice == "1":
+            clear_screen()
             display_parks(db.get_all_parks())
         elif choice == "2":
+            clear_screen()
             display_trails(db.get_all_trails())
         elif choice == "3":
+            clear_screen()
             view_trails_by_park()
         elif choice == "4":
+            clear_screen()
             display_hike_history(db.get_hike_history())
         elif choice == "5":
+            clear_screen()
             add_park()
         elif choice == "6":
+            clear_screen()
             add_trail()
         elif choice == "7":
+            clear_screen()
             add_hike_log()
         elif choice == "8":
+            clear_screen()
             edit_trail()
         elif choice == "9":
+            clear_screen()
             edit_hike_log()
         elif choice == "10":
+            clear_screen()
             remove_trail()
         elif choice == "11":
+            clear_screen()
             remove_hike_log()
         elif choice == "12":
+            clear_screen()
             remove_park()
         elif choice == "13":
+            clear_screen()
             display_summary_report()
         elif choice == "14":
+            clear_screen()
             show_weather()
         elif choice == "0":
+            clear_screen()
             print("\nHappy trails! Goodbye.")
             break
         else:
             print("Invalid option. Please try again.")
+
+        # Pause before returning to menu
+        if choice != "0":
+            input("\nPress Enter to return to menu...")
 
 
 # Entry point
