@@ -653,6 +653,7 @@ def main_menu():
     """
     Display the main menu and return user choice.
     """
+    clear_screen()
     print("\n" + "=" * 40)
     print("       TRAIL LOG TRACKER")
     print("=" * 40)
