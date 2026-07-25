@@ -1,10 +1,12 @@
-# Database file (generated at runtime)
+# Database files (generated at runtime)
 trail_tracker.db
+test_trail_tracker.db
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
+.pytest_cache/
 
 # macOS
 .DS_Store
