@@ -453,7 +453,20 @@ def edit_hike_log():
     If the log ID is invalid or not found, inform the user.
     """
     print("\n--- Update Hike Log ---")
-    display_hike_history(db.get_hike_history())
+    print("  1. Search by trail")
+    print("  2. View all hike logs")
+    sub = input("\nChoose an option: ").strip()
+
+    if sub == "1":
+        trail_id = search_trail("\nTrail: ")
+        if trail_id is None:
+            print("Update cancelled.")
+            return
+        trail = db.get_trail_by_id(trail_id)
+        hikes = [h for h in db.get_hike_history() if h['trail_name'] == trail['trail_name']]
+        display_hike_history(hikes)
+    else:
+        display_hike_history(db.get_hike_history())
 
     # Get log ID
     try:
@@ -562,7 +575,20 @@ def remove_hike_log():
     If the log ID is invalid or not found, inform the user.
     """
     print("\n--- Delete Hike Log ---")
-    hikes = db.get_hike_history()
+    print("  1. Search by trail")
+    print("  2. View all hike logs")
+    sub = input("\nChoose an option: ").strip()
+
+    if sub == "1":
+        trail_id = search_trail("\nTrail: ")
+        if trail_id is None:
+            print("Delete cancelled.")
+            return
+        trail = db.get_trail_by_id(trail_id)
+        hikes = [h for h in db.get_hike_history() if h['trail_name'] == trail['trail_name']]
+    else:
+        hikes = db.get_hike_history()
+
     display_hike_history(hikes)
 
     # Get log ID
@@ -753,16 +779,52 @@ def main():
 
         if choice == "1":
             clear_screen()
-            display_parks(db.get_all_parks())
+            print("\n--- View Parks ---")
+            print("  1. View all parks")
+            print("  2. Search for a park")
+            sub = input("\nChoose an option: ").strip()
+            if sub == "2":
+                park_id = search_park("\nPark: ")
+                if park_id:
+                    parks = [p for p in db.get_all_parks() if p['park_id'] == park_id]
+                    display_parks(parks)
+            else:
+                display_parks(db.get_all_parks())
         elif choice == "2":
             clear_screen()
-            display_trails(db.get_all_trails())
+            print("\n--- View Trails ---")
+            print("  1. View all trails")
+            print("  2. Search for a trail")
+            print("  3. View trails by park")
+            sub = input("\nChoose an option: ").strip()
+            if sub == "2":
+                trail_id = search_trail("\nTrail: ")
+                if trail_id:
+                    trail = db.get_trail_by_id(trail_id)
+                    if trail:
+                        trails = [t for t in db.get_all_trails() if t['trail_id'] == trail_id]
+                        display_trails(trails)
+            elif sub == "3":
+                clear_screen()
+                view_trails_by_park()
+            else:
+                display_trails(db.get_all_trails())
         elif choice == "3":
             clear_screen()
             view_trails_by_park()
         elif choice == "4":
             clear_screen()
-            display_hike_history(db.get_hike_history())
+            print("\n--- View Hike History ---")
+            print("  1. View all hike logs")
+            print("  2. Filter by trail")
+            sub = input("\nChoose an option: ").strip()
+            if sub == "2":
+                trail_id = search_trail("\nTrail: ")
+                if trail_id:
+                    hikes = [h for h in db.get_hike_history() if h['trail_name'] == db.get_trail_by_id(trail_id)['trail_name']]
+                    display_hike_history(hikes)
+            else:
+                display_hike_history(db.get_hike_history())
         elif choice == "5":
             clear_screen()
             add_park()
