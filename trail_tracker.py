@@ -214,40 +214,48 @@ def display_summary_report():
     Display summary statistics using JOINs and aggregate functions.
     Parameters: None
     """
+    stats = db.get_overall_stats()
+
     print("\n" + "=" * 60)
     print("           TRAIL LOG TRACKER - SUMMARY REPORT")
     print("=" * 60)
+    print(f"\n  Total parks:        {stats['total_parks']}")
+    print(f"  Total trails:       {stats['total_trails']}")
+    print(f"  Total hikes logged: {stats['total_hikes']}")
+    print(f"  Total hours hiked:  {stats['total_hours']}")
+    print("\n" + "=" * 60)
 
-    # Hikes Per Park
-    print("\n--- Hikes Per Park ---")
-    park_stats = db.get_hikes_per_park()
-    print(f"{'Park':<50} {'Total Hikes':<13} {'Avg Rating':<10}")
-    print("-" * 73)
+    # Options to drill down
+    print("\n  1. View hikes per park")
+    print("  2. View hikes per trail")
+    print("  3. Return to menu")
+    sub = input("\nChoose an option: ").strip()
 
-    # Display each park's stats with formatted averages
-    for row in park_stats:
-        avg = f"{row['avg_rating']}" if row['avg_rating'] else "N/A"
-        print(f"{row['park_name']:<50} {row['total_hikes']:<13} {avg:<10}")
+    if sub == "1":
+        print("\n--- Hikes Per Park ---")
+        park_stats = db.get_hikes_per_park()
+        # Only show parks with hikes
+        parks_with_hikes = [r for r in park_stats if r['total_hikes'] > 0]
+        if not parks_with_hikes:
+            print("No hikes logged yet.")
+        else:
+            print(f"{'Park':<50} {'Total Hikes':<13} {'Avg Rating':<10}")
+            print("-" * 73)
+            for row in parks_with_hikes:
+                avg = f"{row['avg_rating']}" if row['avg_rating'] else "N/A"
+                print(f"{row['park_name']:<50} {row['total_hikes']:<13} {avg:<10}")
 
-    # Hikes Per Trail
-    print("\n--- Hikes Per Trail ---")
-    trail_stats = db.get_hikes_per_trail()
-    print(f"{'Trail':<40} {'Park':<50} {'Hikes':<7} {'Avg Rate':<9} {'Avg Hrs':<8}")
-    print("-" * 114)
-
-    # Display each trail's stats with formatted averages
-    for row in trail_stats:
-        trail_name = (row['trail_name'][:37] + "...") if len(row['trail_name']) > 40 else row['trail_name']
-        print(f"{trail_name:<40} {row['park_name']:<50} {row['total_hikes']:<7} {row['avg_rating']:<9} {row['avg_duration']:<8}")
-
-    # Overall Stats
-    print("\n--- Overall Statistics ---")
-    stats = db.get_overall_stats()
-    print(f"Total parks:  {stats['total_parks']}")
-    print(f"Total trails: {stats['total_trails']}")
-    print(f"Total hikes:  {stats['total_hikes']}")
-    print(f"Total hours:  {stats['total_hours']}")
-    print("=" * 60)
+    elif sub == "2":
+        print("\n--- Hikes Per Trail ---")
+        trail_stats = db.get_hikes_per_trail()
+        if not trail_stats:
+            print("No hikes logged yet.")
+        else:
+            print(f"{'Trail':<40} {'Park':<50} {'Hikes':<7} {'Avg Rate':<9} {'Avg Hrs':<8}")
+            print("-" * 114)
+            for row in trail_stats:
+                trail_name = (row['trail_name'][:37] + "...") if len(row['trail_name']) > 40 else row['trail_name']
+                print(f"{trail_name:<40} {row['park_name']:<50} {row['total_hikes']:<7} {row['avg_rating']:<9} {row['avg_duration']:<8}")
 
 
 # --- Input/Action Functions ---
