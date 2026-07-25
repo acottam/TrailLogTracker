@@ -138,8 +138,22 @@ def add_park():
         print("Error: All fields are required.")
         return
 
+    # Optional coordinates
+    lat_input = input("Latitude (optional, press Enter to skip): ").strip()
+    lon_input = input("Longitude (optional, press Enter to skip): ").strip()
+
+    latitude = None
+    longitude = None
+    if lat_input and lon_input:
+        try:
+            latitude = float(lat_input)
+            longitude = float(lon_input)
+        except ValueError:
+            print("Error: Latitude and longitude must be numbers.")
+            return
+
     # Insert
-    park_id = db.insert_park(park_name, state, region)
+    park_id = db.insert_park(park_name, state, region, latitude, longitude)
     if park_id:
         print(f"Park '{park_name}' added successfully (ID: {park_id}).")
 
