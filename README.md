@@ -13,7 +13,7 @@ To use the program, run `python3 trail_tracker.py` from the project directory. T
 
 My purpose for writing this software is to deepen my understanding of relational database design, SQL query construction, and how to build a complete application that programmatically creates, reads, updates, and deletes data through a well-structured database layer.
 
-[Software Demo Video](http://youtube.link.goes.here)
+[Software Demo Video](https://youtu.be/BJrjHzIs7d8)
 
 # Relational Database
 
