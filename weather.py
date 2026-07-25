@@ -98,6 +98,7 @@ def calculate_heat_index(temp_f: float, humidity: float) -> Optional[float]:
     """
     # Heat index only applies at 80°F+
     if temp_f < 80:
+        # Returns None below 80°F
         return None
 
     # Rothfusz regression
@@ -113,6 +114,11 @@ def calculate_heat_index(temp_f: float, humidity: float) -> Optional[float]:
         - 0.00000199 * temp_f**2 * humidity**2
     )
 
+    # Adjustments for low humidity
+    if humidity < 13 and temp_f > 80:
+        hi -= ((13 - humidity) / 4) * ((85 - temp_f) / 4)
+
+    # Adjustments for high humidity
     return hi
 
 
@@ -124,6 +130,7 @@ def get_weather(park_name: str) -> dict:
     """
     # Check if park is in coordinates list
     if park_name not in PARK_COORDS:
+        # Raise ValueError if park is not found
         raise ValueError(f"Unknown park '{park_name}'. Add it to PARK_COORDS in weather.py.")
 
     # Lat and Long Coordinates
@@ -214,4 +221,5 @@ def _weather_code_to_description(code: int) -> str:
         99: "Thunderstorm with heavy hail",
     }
 
+    # Return Description or Unknown 
     return codes.get(code, f"Unknown ({code})")

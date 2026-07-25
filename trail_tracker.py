@@ -17,21 +17,32 @@ from weather import get_weather, PARK_COORDS
 # --- Display Functions ---
 
 def display_parks(parks: list[dict]):
-    """Display parks in a formatted table."""
+    """
+    Display parks in a formatted table.
+    Parameters: parks (list of dicts) - The parks to display.
+    """
     if not parks:
         print("No parks found.")
         return
 
+    # Check if park_name is in the data
     print(f"\n{'ID':<4} {'Park Name':<35} {'State':<12} {'Region':<15}")
     print("-" * 66)
+
+    # Display each park's stats with formatted averages
     for p in parks:
         print(f"{p['park_id']:<4} {p['park_name']:<35} {p['state']:<12} {p['region']:<15}")
 
 
 def display_trails(trails: list[dict]):
-    """Display trails in a formatted table."""
+    """
+    Display trails in a formatted table.
+    Parameters: trails (list of dicts) - The trails to display.
+    """
     if not trails:
         print("No trails found.")
+
+        # Check if park_name is in the data
         return
 
     # Check if park_name is in the data
@@ -40,6 +51,8 @@ def display_trails(trails: list[dict]):
         print("-" * 83)
         for t in trails:
             print(f"{t['trail_id']:<4} {t['trail_name']:<25} {t['park_name']:<30} {t['distance_miles']:<7.1f} {t['elevation_gain_ft']:<7} {t['difficulty']:<10}")
+
+    # If park_name is not in the data, display without it
     else:
         print(f"\n{'ID':<4} {'Trail Name':<25} {'Miles':<7} {'Elev (ft)':<10} {'Difficulty':<10}")
         print("-" * 56)
@@ -48,20 +61,31 @@ def display_trails(trails: list[dict]):
 
 
 def display_hike_history(hikes: list[dict]):
-    """Display hike logs in a formatted table."""
+    """
+    Display hike logs in a formatted table.
+    Parameters: hikes (list of dicts) - The hike logs to display.
+    """
     if not hikes:
         print("No hike logs found.")
+
+        # Check if park_name is in the data
         return
 
+    # Check if park_name is in the data
     print(f"\n{'ID':<4} {'Trail':<22} {'Park':<25} {'Date':<12} {'Hours':<6} {'Rating':<7} {'Notes'}")
     print("-" * 100)
+
+    # Display each hike log with truncated notes if necessary
     for h in hikes:
         notes = (h['notes'][:30] + "...") if h['notes'] and len(h['notes']) > 30 else (h['notes'] or "")
         print(f"{h['log_id']:<4} {h['trail_name']:<22} {h['park_name']:<25} {h['hike_date']:<12} {h['duration_hours']:<6.1f} {h['rating']:<7} {notes}")
 
 
 def display_summary_report():
-    """Display summary statistics using JOINs and aggregate functions."""
+    """
+    Display summary statistics using JOINs and aggregate functions.
+    Parameters: None
+    """
     print("\n" + "=" * 60)
     print("           TRAIL LOG TRACKER - SUMMARY REPORT")
     print("=" * 60)
@@ -71,6 +95,8 @@ def display_summary_report():
     park_stats = db.get_hikes_per_park()
     print(f"{'Park':<35} {'Total Hikes':<13} {'Avg Rating':<10}")
     print("-" * 58)
+
+    # Display each park's stats with formatted averages
     for row in park_stats:
         avg = f"{row['avg_rating']}" if row['avg_rating'] else "N/A"
         print(f"{row['park_name']:<35} {row['total_hikes']:<13} {avg:<10}")
@@ -80,6 +106,8 @@ def display_summary_report():
     trail_stats = db.get_hikes_per_trail()
     print(f"{'Trail':<22} {'Park':<25} {'Hikes':<7} {'Avg Rate':<9} {'Avg Hrs':<8}")
     print("-" * 71)
+
+    # Display each trail's stats with formatted averages
     for row in trail_stats:
         print(f"{row['trail_name']:<22} {row['park_name']:<25} {row['total_hikes']:<7} {row['avg_rating']:<9} {row['avg_duration']:<8}")
 
@@ -96,7 +124,10 @@ def display_summary_report():
 # --- Input/Action Functions ---
 
 def add_park():
-    """Prompt user to add a new park."""
+    """
+    Prompt user to add a new park.
+    If the park name already exists, inform the user.
+    """
     print("\n--- Add New Park ---")
     park_name = input("Park name: ").strip()
     state = input("State: ").strip()
@@ -114,33 +145,46 @@ def add_park():
 
 
 def add_trail():
-    """Prompt user to add a new trail."""
+    """
+    Prompt user to add a new trail.
+    If the park ID is invalid or not found, inform the user.
+    """
     print("\n--- Add New Trail ---")
 
     # Show available parks
     display_parks(db.get_all_parks())
 
+    # Get park ID with validation
     try:
         park_id = int(input("\nPark ID to add trail to: "))
+
+    # Validate park ID
     except ValueError:
         print("Error: Invalid park ID.")
         return
 
     trail_name = input("Trail name: ").strip()
 
+    # Get distance and elevation with validation
     try:
         distance = float(input("Distance (miles): "))
         elevation = int(input("Elevation gain (ft): "))
+
+    # Validate distance and elevation
     except ValueError:
         print("Error: Distance must be a number, elevation must be an integer.")
         return
 
+    # Get difficulty with validation
     print("Difficulty options: Easy, Moderate, Hard, Expert")
     difficulty = input("Difficulty: ").strip().capitalize()
+
+    # Validation
     if difficulty not in ("Easy", "Moderate", "Hard", "Expert"):
         print("Error: Invalid difficulty level.")
         return
 
+    # Validation
     if not trail_name:
         print("Error: Trail name is required.")
         return
@@ -152,48 +196,68 @@ def add_trail():
 
 
 def add_hike_log():
-    """Prompt user to log a new hike."""
+    """
+    Prompt user to log a new hike.
+    If the trail ID is invalid or not found, inform the user.
+    """
     print("\n--- Log a Hike ---")
 
     # Show available trails
     display_trails(db.get_all_trails())
 
+    # Get trail ID
     try:
         trail_id = int(input("\nTrail ID: "))
+
+    # Validate trail ID
     except ValueError:
         print("Error: Invalid trail ID.")
         return
 
+    # Get hike date (default to today)
     hike_date = input(f"Date (YYYY-MM-DD) [default: {date.today()}]: ").strip()
     if not hike_date:
         hike_date = str(date.today())
 
+    # Validate date format
     try:
         duration = float(input("Duration (hours): "))
         rating = int(input("Rating (1-5): "))
+
+    # Validate duration and rating
     except ValueError:
         print("Error: Duration must be a number, rating must be 1-5.")
         return
 
+    # Validation
     if rating < 1 or rating > 5:
         print("Error: Rating must be between 1 and 5.")
         return
 
+    # Optional notes
     notes = input("Notes (optional): ").strip()
 
     # Insert
     log_id = db.insert_hike_log(trail_id, hike_date, duration, rating, notes)
+
+    # Display success message
     if log_id:
         print(f"Hike log added successfully (ID: {log_id}).")
 
 
 def edit_trail():
-    """Prompt user to update an existing trail."""
+    """
+    Prompt user to update an existing trail.
+    If the trail ID is invalid or not found, inform the user.
+    """
     print("\n--- Update Trail ---")
     display_trails(db.get_all_trails())
 
+    # Get trail ID
     try:
         trail_id = int(input("\nTrail ID to update: "))
+
+    # Validate trail ID
     except ValueError:
         print("Error: Invalid trail ID.")
         return
@@ -204,23 +268,30 @@ def edit_trail():
         print("Error: Trail not found.")
         return
 
+    # Get current trail data
     print(f"\nCurrent values: {trail['trail_name']} | {trail['distance_miles']} mi | {trail['elevation_gain_ft']} ft | {trail['difficulty']}")
     print("Press Enter to keep current value.\n")
 
+    # Get new values with defaults
     trail_name = input(f"Trail name [{trail['trail_name']}]: ").strip() or trail['trail_name']
     distance_input = input(f"Distance miles [{trail['distance_miles']}]: ").strip()
     elevation_input = input(f"Elevation gain ft [{trail['elevation_gain_ft']}]: ").strip()
 
+    # Get difficulty with validation
     print("Difficulty options: Easy, Moderate, Hard, Expert")
     difficulty = input(f"Difficulty [{trail['difficulty']}]: ").strip().capitalize() or trail['difficulty']
 
+    # Validate inputs
     try:
         distance = float(distance_input) if distance_input else trail['distance_miles']
         elevation = int(elevation_input) if elevation_input else trail['elevation_gain_ft']
+
+    # Validate distance and elevation
     except ValueError:
         print("Error: Invalid number entered.")
         return
 
+    # Validate difficulty
     if difficulty not in ("Easy", "Moderate", "Hard", "Expert"):
         print("Error: Invalid difficulty level.")
         return
@@ -228,17 +299,25 @@ def edit_trail():
     # Update
     if db.update_trail(trail_id, trail_name, distance, elevation, difficulty):
         print(f"Trail '{trail_name}' updated successfully.")
+
+    # Show success message
     else:
         print("Error: Failed to update trail.")
 
 
 def edit_hike_log():
-    """Prompt user to update an existing hike log."""
+    """
+    Prompt user to update an existing hike log.
+    If the log ID is invalid or not found, inform the user.
+    """
     print("\n--- Update Hike Log ---")
     display_hike_history(db.get_hike_history())
 
+    # Get log ID
     try:
         log_id = int(input("\nLog ID to update: "))
+
+    # Validate log ID
     except ValueError:
         print("Error: Invalid log ID.")
         return
@@ -249,6 +328,7 @@ def edit_hike_log():
         print("Error: Hike log not found.")
         return
 
+    # Get current log data
     print(f"\nCurrent: Date={log['hike_date']} | Duration={log['duration_hours']}h | Rating={log['rating']} | Notes={log['notes']}")
     print("Press Enter to keep current value.\n")
 
@@ -259,13 +339,17 @@ def edit_hike_log():
     if not notes:
         notes = log['notes']
 
+    # Validate inputs
     try:
         duration = float(duration_input) if duration_input else log['duration_hours']
         rating = int(rating_input) if rating_input else log['rating']
+
+    # Validate duration and rating
     except ValueError:
         print("Error: Invalid number entered.")
         return
 
+    # Validate rating range
     if rating < 1 or rating > 5:
         print("Error: Rating must be between 1 and 5.")
         return
@@ -273,17 +357,26 @@ def edit_hike_log():
     # Update
     if db.update_hike_log(log_id, hike_date, duration, rating, notes):
         print("Hike log updated successfully.")
+
+    # Show success message
     else:
         print("Error: Failed to update hike log.")
 
 
 def remove_trail():
-    """Prompt user to delete a trail."""
+    """
+    Prompt user to delete a trail.
+    If the trail has associated hike logs, confirm deletion of both.
+    If the trail does not exist, inform the user.
+    """
     print("\n--- Delete Trail ---")
     display_trails(db.get_all_trails())
 
+    # Get trail ID
     try:
         trail_id = int(input("\nTrail ID to delete: "))
+
+    # Validate trail ID
     except ValueError:
         print("Error: Invalid trail ID.")
         return
@@ -301,6 +394,8 @@ def remove_trail():
         if confirm != "yes":
             print("Delete cancelled.")
             return
+        
+    # If no logs exist, confirm deletion
     else:
         confirm = input(f"Delete trail '{trail['trail_name']}'? (yes/no): ").strip().lower()
         if confirm != "yes":
@@ -310,18 +405,26 @@ def remove_trail():
     # Delete
     if db.delete_trail(trail_id):
         print(f"Trail '{trail['trail_name']}' deleted successfully.")
+
+    # Show success message
     else:
         print("Error: Failed to delete trail.")
 
 
 def remove_hike_log():
-    """Prompt user to delete a hike log."""
+    """
+    Prompt user to delete a hike log.
+    If the log ID is invalid or not found, inform the user.
+    """
     print("\n--- Delete Hike Log ---")
     hikes = db.get_hike_history()
     display_hike_history(hikes)
 
+    # Get log ID
     try:
         log_id = int(input("\nLog ID to delete: "))
+
+    # Validate log ID
     except ValueError:
         print("Error: Invalid log ID.")
         return
@@ -332,7 +435,10 @@ def remove_hike_log():
         print("Error: Hike log not found.")
         return
 
+    # Confirm deletion
     confirm = input(f"Delete log for '{log['trail_name']}' on {log['hike_date']}? (yes/no): ").strip().lower()
+
+    # Validate confirmation
     if confirm != "yes":
         print("Delete cancelled.")
         return
@@ -340,16 +446,24 @@ def remove_hike_log():
     # Delete
     if db.delete_hike_log(log_id):
         print("Hike log deleted successfully.")
+
+    # Show success message
     else:
         print("Error: Failed to delete hike log.")
 
 
 def view_trails_by_park():
-    """Prompt user to select a park, then display its trails."""
+    """
+    Prompt user to select a park, then display its trails.
+    if no trails exist for the selected park, inform the user.
+    """
     display_parks(db.get_all_parks())
 
+    # Get park ID
     try:
         park_id = int(input("\nEnter Park ID to view trails: "))
+
+
     except ValueError:
         print("Error: Invalid park ID.")
         return
@@ -367,15 +481,21 @@ def view_trails_by_park():
 # --- Weather Functions ---
 
 def show_weather():
-    """Prompt user to select a park and display current weather."""
+    """
+    Prompt user to select a park and display current weather.
+    If the park does not have coordinates in PARK_COORDS, inform the user.
+    """
     print("\n--- Park Weather Lookup ---")
 
     # Show available parks
     parks = db.get_all_parks()
     display_parks(parks)
 
+    # Get park ID
     try:
         park_id = int(input("\nEnter Park ID for weather: "))
+
+    # Validate park ID
     except ValueError:
         print("Error: Invalid park ID.")
         return
@@ -395,6 +515,8 @@ def show_weather():
     # Fetch weather
     try:
         weather = get_weather(park_name)
+
+    # Handle exceptions during weather fetch
     except Exception as e:
         print(f"Error fetching weather: {e}")
         return
@@ -424,7 +546,9 @@ def show_weather():
 # --- Menu System ---
 
 def main_menu():
-    """Display the main menu and return user choice."""
+    """
+    Display the main menu and return user choice.
+    """
     print("\n" + "=" * 40)
     print("       TRAIL LOG TRACKER")
     print("=" * 40)
@@ -447,7 +571,10 @@ def main_menu():
 
 
 def main():
-    """Main application entry point."""
+    """
+    Main application entry point.
+    Initializes the database, loads data, and starts the main menu loop.
+    """
     # Initialize database and load data from CSV
     db.create_database()
     db.import_trails_from_csv()
@@ -489,5 +616,6 @@ def main():
             print("Invalid option. Please try again.")
 
 
+# Entry point
 if __name__ == "__main__":
     main()
