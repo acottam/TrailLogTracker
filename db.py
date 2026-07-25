@@ -696,6 +696,61 @@ def delete_hike_log(log_id: int, db_path: Path = DB_PATH) -> bool:
         conn.close()
 
 
+def delete_park(park_id: int, db_path: Path = DB_PATH) -> bool:
+    """
+    Delete a park and all its associated trails and hike logs.
+    Parameters: park_id, db_path
+    Return: True if deleted, False otherwise
+    """
+    # DB Connection
+    conn = get_connection(db_path)
+
+    try:
+        with conn:
+            # Delete hike logs for all trails in this park
+            conn.execute("""
+                DELETE FROM hike_logs WHERE trail_id IN
+                (SELECT trail_id FROM trails WHERE park_id = ?)
+            """, (park_id,))
+
+            # Delete trails in this park
+            conn.execute("DELETE FROM trails WHERE park_id = ?", (park_id,))
+
+            # Delete the park
+            cursor = conn.execute("DELETE FROM parks WHERE park_id = ?", (park_id,))
+            return cursor.rowcount > 0
+
+    # SQLite Error
+    except sqlite3.Error as e:
+        print(f"Error deleting park: {e}")
+        return False
+
+    # Close DB Connection
+    finally:
+        conn.close()
+
+
+def get_trail_count_for_park(park_id: int, db_path: Path = DB_PATH) -> int:
+    """
+    Get the number of trails for a park.
+    Parameters: park_id, db_path
+    Return: int
+    """
+    # DB Connection
+    conn = get_connection(db_path)
+
+    # Execute SQL
+    row = conn.execute(
+        "SELECT COUNT(*) FROM trails WHERE park_id = ?", (park_id,)
+    ).fetchone()
+
+    # Close DB Connection
+    conn.close()
+
+    # Return
+    return row[0] if row else 0
+
+
 def get_hike_log_count_for_trail(trail_id: int, db_path: Path = DB_PATH) -> int:
     """
     Get the number of hike logs for a trail.

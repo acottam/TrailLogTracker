@@ -452,6 +452,41 @@ def remove_hike_log():
         print("Error: Failed to delete hike log.")
 
 
+def remove_park():
+    """Prompt user to delete a park and all its trails/logs."""
+    print("\n--- Delete Park ---")
+    display_parks(db.get_all_parks())
+
+    try:
+        park_id = int(input("\nPark ID to delete: "))
+    except ValueError:
+        print("Error: Invalid park ID.")
+        return
+
+    # Get park info
+    park_name = db.get_park_name(park_id)
+    if not park_name:
+        print("Error: Park not found.")
+        return
+
+    # Check for existing trails
+    trail_count = db.get_trail_count_for_park(park_id)
+    if trail_count > 0:
+        confirm = input(f"Warning: '{park_name}' has {trail_count} trail(s). Delete park, ALL trails, AND hike logs? (yes/no): ").strip().lower()
+    else:
+        confirm = input(f"Delete park '{park_name}'? (yes/no): ").strip().lower()
+
+    if confirm != "yes":
+        print("Delete cancelled.")
+        return
+
+    # Delete
+    if db.delete_park(park_id):
+        print(f"Park '{park_name}' and all associated data deleted successfully.")
+    else:
+        print("Error: Failed to delete park.")
+
+
 def view_trails_by_park():
     """
     Prompt user to select a park, then display its trails.
@@ -557,8 +592,9 @@ def main_menu():
     print("  9. Update Hike Log")
     print(" 10. Delete Trail")
     print(" 11. Delete Hike Log")
-    print(" 12. Summary Report")
-    print(" 13. Park Weather")
+    print(" 12. Delete Park")
+    print(" 13. Summary Report")
+    print(" 14. Park Weather")
     print("  0. Exit")
     print("-" * 40)
     return input("Choose an option: ").strip()
@@ -600,8 +636,10 @@ def main():
         elif choice == "11":
             remove_hike_log()
         elif choice == "12":
-            display_summary_report()
+            remove_park()
         elif choice == "13":
+            display_summary_report()
+        elif choice == "14":
             show_weather()
         elif choice == "0":
             print("\nHappy trails! Goodbye.")
