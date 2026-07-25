@@ -6,74 +6,47 @@ Description: Weather lookup for national park locations using Open-Meteo API.
 
 # Imports
 from __future__ import annotations
+import csv
 import requests
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
 from db import get_park_coordinates
 
+# Constants
+COORDS_CSV_PATH = Path(__file__).parent / "park_coords.csv"
 
-# National Park Coordinates (lat, lon)
-PARK_COORDS = {
-    "Acadia National Park": (44.34815, -68.20223),
-    "Arches National Park": (38.61587, -109.61999),
-    "Badlands National Park": (43.7613, -101.92792),
-    "Big Bend National Park": (29.41042, -103.20765),
-    "Biscayne National Park": (25.53849, -80.33091),
-    "Black Canyon of the Gunnison National Park": (38.57637, -107.7206),
-    "Bryce Canyon National Park": (37.50369, -112.26266),
-    "Canyonlands National Park": (38.4231, -109.90878),
-    "Capitol Reef National Park": (37.71796, -110.9301),
-    "Carlsbad Caverns National Park": (32.17496, -104.37547),
-    "Channel Islands National Park": (33.48062, -119.02959),
-    "Congaree National Park": (33.82994, -80.8225),
-    "Congaree National Park Wilderness": (33.81969, -80.7879),
-    "Crater Lake National Park": (42.86542, -122.16247),
-    "Cuyahoga Valley National Park": (41.25634, -81.57266),
-    "Death Valley National Park": (36.33218, -116.80642),
-    "Denali National Park": (63.80507, -148.95336),
-    "Dry Tortugas National Park": (24.62723, -82.87242),
-    "Everglades National Park": (25.38252, -80.60978),
-    "Fort Hunt National Park": (38.71518, -77.05732),
-    "Fort Pickens National Park": (30.31943, -87.26118),
-    "Gateway Arch National Park": (38.62327, -90.18743),
-    "Glacier Bay National Park": (58.46205, -135.77323),
-    "Glacier National Park": (48.82859, -114.20173),
-    "Grand Canyon National Park": (36.05706, -112.14428),
-    "Grand Teton National Park": (43.69978, -110.61533),
-    "Great Basin National Park": (39.00984, -114.30709),
-    "Great Sand Dunes National Park and Preserve": (37.75804, -105.50116),
-    "Great Smoky Mountains National Park": (35.59137, -83.85285),
-    "Guadalupe Mountains National Park": (31.89674, -104.8286),
-    "Haleakala National Park": (20.71417, -156.25093),
-    "Hawaii Volcanoes National Park": (19.43001, -155.25985),
-    "Hot Springs National Park": (34.51359, -93.05238),
-    "Indiana Dunes National Park": (41.62953, -87.09132),
-    "Isle Royale National Park": (47.91214, -89.15641),
-    "Joshua Tree National Park": (33.98986, -116.02328),
-    "Katmai National Park": (58.55986, -155.77752),
-    "Kenai Fjords National Park": (60.18879, -149.631),
-    "Kings Canyon National Park": (36.7947, -118.58295),
-    "Lassen Volcanic National Park": (40.5652, -121.30133),
-    "Mammoth Cave National Park": (37.2057, -86.13904),
-    "Mesa Verde National Park": (37.19574, -108.53807),
-    "Mount Rainier National Park": (46.78386, -121.74238),
-    "North Cascades National Park": (48.51941, -120.67423),
-    "Olympic National Park": (48.0644, -123.99621),
-    "Petrified Forest National Park": (34.94323, -109.77762),
-    "Pinnacles National Park": (36.49191, -121.20958),
-    "Redwood National Park": (41.45094, -124.03803),
-    "Rocky Mountain National Park": (40.31226, -105.64641),
-    "Saguaro National Park": (32.06403, -110.62252),
-    "Sequoia National Park": (36.02707, -118.51524),
-    "Shenandoah National Park": (38.4511, -78.48581),
-    "Theodore Roosevelt National Park": (47.59297, -103.33894),
-    "Voyageurs National Park": (48.42288, -92.84588),
-    "Wind Cave National Park": (43.59131, -103.38165),
-    "Wolf Trap National Park for the Performing Arts": (38.93672, -77.26292),
-    "Yellowstone National Park": (44.91214, -110.38741),
-    "Yosemite National Park": (37.57543, -119.68064),
-    "Zion National Park": (37.21752, -112.92365),
-}
+
+def load_park_coords(csv_path: Path = COORDS_CSV_PATH) -> dict:
+    """
+    Load park coordinates from CSV file.
+    Parameters: csv_path
+    Return: dict of {park_name: (latitude, longitude)}
+    """
+    coords = {}
+
+    try:
+        with open(csv_path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                park_name = row["park_name"].strip()
+                lat = float(row["latitude"])
+                lon = float(row["longitude"])
+                coords[park_name] = (lat, lon)
+
+    # File Not Found
+    except FileNotFoundError:
+        pass
+
+    # Value Error
+    except ValueError:
+        pass
+
+    return coords
+
+
+# Load coordinates from CSV at module import
+PARK_COORDS = load_park_coords()
 
 
 def calculate_wind_chill(temp_f: float, wind_mph: float) -> Optional[float]:
