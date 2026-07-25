@@ -14,6 +14,8 @@ import platform
 from datetime import date
 import db
 from weather import get_weather
+from prompt_toolkit import prompt
+from prompt_toolkit.completion import FuzzyWordCompleter, FuzzyCompleter, WordCompleter
 
 
 # --- Utility Functions ---
@@ -28,6 +30,113 @@ def clear_screen():
         os.system("cls")
     else:
         os.system("clear")
+
+
+def search_park(prompt_text: str = "Search park (type to filter, or enter ID): ") -> int | None:
+    """
+    Interactive park search with autocomplete. Returns park_id or None if cancelled.
+    Parameters: prompt_text
+    Return: park_id (int) or None
+    """
+    parks = db.get_all_parks()
+    park_names = [p['park_name'] for p in parks]
+
+    # Create completer with park names
+    completer = FuzzyWordCompleter(park_names)
+
+    # Show prompt with autocomplete
+    print("  (Start typing a park name for suggestions, or enter a Park ID)")
+    print("  (Enter 0 to cancel)\n")
+
+    user_input = prompt(prompt_text, completer=completer).strip()
+
+    # Cancel
+    if user_input == "0":
+        return None
+
+    # Try as ID first
+    try:
+        park_id = int(user_input)
+        if db.get_park_name(park_id):
+            return park_id
+        else:
+            print("Error: Park ID not found.")
+            return None
+    except ValueError:
+        pass
+
+    # Try matching by name
+    matches = [p for p in parks if user_input.lower() in p['park_name'].lower()]
+    if len(matches) == 1:
+        return matches[0]['park_id']
+    elif len(matches) > 1:
+        print(f"\nMultiple matches found:")
+        for m in matches:
+            print(f"  {m['park_id']}: {m['park_name']}")
+        try:
+            park_id = int(input("\nEnter Park ID: "))
+            return park_id
+        except ValueError:
+            print("Error: Invalid park ID.")
+            return None
+    else:
+        print(f"Error: No park found matching '{user_input}'.")
+        return None
+
+
+def search_trail(prompt_text: str = "Search trail (type to filter, or enter ID): ") -> int | None:
+    """
+    Interactive trail search with autocomplete. Returns trail_id or None if cancelled.
+    Parameters: prompt_text
+    Return: trail_id (int) or None
+    """
+    trails = db.get_all_trails()
+    trail_names = list(set(t['trail_name'] for t in trails))
+
+    # Create completer with trail names
+    completer = FuzzyWordCompleter(trail_names)
+
+    # Show prompt with autocomplete
+    print("  (Start typing a trail name for suggestions, or enter a Trail ID)")
+    print("  (Enter 0 to cancel)\n")
+
+    user_input = prompt(prompt_text, completer=completer).strip()
+
+    # Cancel
+    if user_input == "0":
+        return None
+
+    # Try as ID first
+    try:
+        trail_id = int(user_input)
+        if db.get_trail_by_id(trail_id):
+            return trail_id
+        else:
+            print("Error: Trail ID not found.")
+            return None
+    except ValueError:
+        pass
+
+    # Try matching by name
+    matches = [t for t in trails if user_input.lower() in t['trail_name'].lower()]
+    if len(matches) == 1:
+        return matches[0]['trail_id']
+    elif len(matches) > 1:
+        print(f"\nMultiple matches ({len(matches)} trails):")
+        for m in matches[:15]:
+            name = (m['trail_name'][:37] + "...") if len(m['trail_name']) > 40 else m['trail_name']
+            print(f"  {m['trail_id']}: {name} ({m['park_name']})")
+        if len(matches) > 15:
+            print(f"  ... and {len(matches) - 15} more")
+        try:
+            trail_id = int(input("\nEnter Trail ID: "))
+            return trail_id
+        except ValueError:
+            print("Error: Invalid trail ID.")
+            return None
+    else:
+        print(f"Error: No trail found matching '{user_input}'.")
+        return None
 
 
 # --- Display Functions ---
@@ -194,17 +303,11 @@ def add_trail():
     # Show available parks
     display_parks(db.get_all_parks())
 
-    # Get park ID with validation
-    try:
-        park_id = int(input("\nPark ID to add trail to (0 to cancel): "))
-
-    # Validate park ID
-    except ValueError:
-        print("Error: Invalid park ID.")
-        return
+    # Get park ID with search
+    park_id = search_park("\nPark: ")
 
     # Cancel
-    if park_id == 0:
+    if park_id is None:
         print("Add cancelled.")
         return
 
@@ -247,20 +350,11 @@ def add_hike_log():
     """
     print("\n--- Log a Hike ---")
 
-    # Show available trails
-    display_trails(db.get_all_trails())
-
-    # Get trail ID
-    try:
-        trail_id = int(input("\nTrail ID (0 to cancel): "))
-
-    # Validate trail ID
-    except ValueError:
-        print("Error: Invalid trail ID.")
-        return
+    # Get trail ID with search
+    trail_id = search_trail("\nTrail: ")
 
     # Cancel
-    if trail_id == 0:
+    if trail_id is None:
         print("Add cancelled.")
         return
 
@@ -301,19 +395,12 @@ def edit_trail():
     If the trail ID is invalid or not found, inform the user.
     """
     print("\n--- Update Trail ---")
-    display_trails(db.get_all_trails())
 
-    # Get trail ID
-    try:
-        trail_id = int(input("\nTrail ID to update (0 to cancel): "))
-
-    # Validate trail ID
-    except ValueError:
-        print("Error: Invalid trail ID.")
-        return
+    # Get trail ID with search
+    trail_id = search_trail("\nTrail: ")
 
     # Cancel
-    if trail_id == 0:
+    if trail_id is None:
         print("Update cancelled.")
         return
 
@@ -430,19 +517,12 @@ def remove_trail():
     If the trail does not exist, inform the user.
     """
     print("\n--- Delete Trail ---")
-    display_trails(db.get_all_trails())
 
-    # Get trail ID
-    try:
-        trail_id = int(input("\nTrail ID to delete (0 to cancel): "))
-
-    # Validate trail ID
-    except ValueError:
-        print("Error: Invalid trail ID.")
-        return
+    # Get trail ID with search
+    trail_id = search_trail("\nTrail: ")
 
     # Cancel
-    if trail_id == 0:
+    if trail_id is None:
         print("Delete cancelled.")
         return
 
@@ -525,16 +605,12 @@ def remove_hike_log():
 def remove_park():
     """Prompt user to delete a park and all its trails/logs."""
     print("\n--- Delete Park ---")
-    display_parks(db.get_all_parks())
 
-    try:
-        park_id = int(input("\nPark ID to delete (0 to cancel): "))
-    except ValueError:
-        print("Error: Invalid park ID.")
-        return
+    # Get park ID with search
+    park_id = search_park("\nPark: ")
 
     # Cancel
-    if park_id == 0:
+    if park_id is None:
         print("Delete cancelled.")
         return
 
@@ -567,15 +643,9 @@ def view_trails_by_park():
     Prompt user to select a park, then display its trails.
     if no trails exist for the selected park, inform the user.
     """
-    display_parks(db.get_all_parks())
-
-    # Get park ID
-    try:
-        park_id = int(input("\nEnter Park ID to view trails: "))
-
-
-    except ValueError:
-        print("Error: Invalid park ID.")
+    # Get park ID with search
+    park_id = search_park("\nPark: ")
+    if park_id is None:
         return
 
     # Get park name
@@ -597,17 +667,9 @@ def show_weather():
     """
     print("\n--- Park Weather Lookup ---")
 
-    # Show available parks
-    parks = db.get_all_parks()
-    display_parks(parks)
-
-    # Get park ID
-    try:
-        park_id = int(input("\nEnter Park ID for weather: "))
-
-    # Validate park ID
-    except ValueError:
-        print("Error: Invalid park ID.")
+    # Get park ID with search
+    park_id = search_park("\nPark: ")
+    if park_id is None:
         return
 
     # Get park name
