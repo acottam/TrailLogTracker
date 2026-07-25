@@ -19,7 +19,9 @@ CREATE_PARKS_SQL = """
         park_id INTEGER PRIMARY KEY AUTOINCREMENT,
         park_name TEXT NOT NULL,
         state TEXT NOT NULL,
-        region TEXT NOT NULL
+        region TEXT NOT NULL,
+        latitude REAL,
+        longitude REAL
     )
 """
 
@@ -199,6 +201,9 @@ def import_trails_from_csv(csv_path: Path = CSV_PATH, db_path: Path = DB_PATH, t
             # Track parks to avoid duplicates
             parks_added = {}
 
+            # Track coordinates per park for averaging
+            park_coords = {}
+
             # Build trail rows
             trail_rows = []
 
@@ -206,31 +211,43 @@ def import_trails_from_csv(csv_path: Path = CSV_PATH, db_path: Path = DB_PATH, t
                 park_name = row["park_name"].strip()
                 state = row["state"].strip()
                 region = row["region"].strip()
+                lat = float(row["latitude"])
+                lon = float(row["longitude"])
 
-                # Insert park if not already added
-                if park_name not in parks_added:
-                    cursor.execute(
-                        "INSERT INTO parks (park_name, state, region) VALUES (?, ?, ?)",
-                        (park_name, state, region)
-                    )
-                    parks_added[park_name] = cursor.lastrowid
+                # Collect coordinates for averaging
+                if park_name not in park_coords:
+                    park_coords[park_name] = {"lats": [], "lons": [], "state": state, "region": region}
+                park_coords[park_name]["lats"].append(lat)
+                park_coords[park_name]["lons"].append(lon)
 
-                # Get park_id
-                park_id = parks_added[park_name]
-
-                # Add trail row
+                # Add trail row (park_id will be set after parks are inserted)
                 trail_rows.append((
                     row["trail_name"].strip(),
-                    park_id,
+                    park_name,
                     float(row["distance_miles"]),
                     int(row["elevation_gain_ft"]),
                     row["difficulty"].strip(),
                 ))
 
-            # Insert all trails
+            # Insert parks with average coordinates
+            for park_name, data in park_coords.items():
+                avg_lat = sum(data["lats"]) / len(data["lats"])
+                avg_lon = sum(data["lons"]) / len(data["lons"])
+                cursor.execute(
+                    "INSERT INTO parks (park_name, state, region, latitude, longitude) VALUES (?, ?, ?, ?, ?)",
+                    (park_name, data["state"], data["region"], round(avg_lat, 5), round(avg_lon, 5))
+                )
+                parks_added[park_name] = cursor.lastrowid
+
+            # Insert all trails with park_id lookup
+            trail_inserts = []
+            for trail_name, park_name, distance, elevation, difficulty in trail_rows:
+                park_id = parks_added[park_name]
+                trail_inserts.append((trail_name, park_id, distance, elevation, difficulty))
+
             conn.executemany(
                 "INSERT INTO trails (trail_name, park_id, distance_miles, elevation_gain_ft, difficulty) VALUES (?, ?, ?, ?, ?)",
-                trail_rows
+                trail_inserts
             )
 
         print(f"Imported {len(parks_added)} parks and {len(trail_rows)} trails from CSV.")
@@ -267,10 +284,11 @@ def import_trails_from_csv(csv_path: Path = CSV_PATH, db_path: Path = DB_PATH, t
 
 # --- INSERT Functions ---
 
-def insert_park(park_name: str, state: str, region: str, db_path: Path = DB_PATH) -> int | None:
+def insert_park(park_name: str, state: str, region: str,
+                latitude: float = None, longitude: float = None, db_path: Path = DB_PATH) -> int | None:
     """
     Insert a new park into the database.
-    Parameters: park_name, state, region, db_path
+    Parameters: park_name, state, region, latitude, longitude, db_path
     Return: park_id or None
     """
     # DB Connection
@@ -279,8 +297,8 @@ def insert_park(park_name: str, state: str, region: str, db_path: Path = DB_PATH
     try:
         with conn:
             cursor = conn.execute(
-                "INSERT INTO parks (park_name, state, region) VALUES (?, ?, ?)",
-                (park_name, state, region)
+                "INSERT INTO parks (park_name, state, region, latitude, longitude) VALUES (?, ?, ?, ?, ?)",
+                (park_name, state, region, latitude, longitude)
             )
             return cursor.lastrowid
 
@@ -455,6 +473,40 @@ def get_park_name(park_id: int, db_path: Path = DB_PATH) -> str | None:
 
     # Return
     return row[0] if row else None
+
+
+def get_park_coordinates(park_name: str, db_path: Path = DB_PATH) -> tuple[float, float] | None:
+    """
+    Get coordinates of a park by name.
+    Parameters: park_name, db_path
+    Return: (latitude, longitude) or None
+    """
+    # Check if DB exists
+    if not db_path.exists():
+        return None
+
+    # DB Connection
+    conn = get_connection(db_path)
+
+    try:
+        # Execute SQL
+        row = conn.execute(
+            "SELECT latitude, longitude FROM parks WHERE park_name = ?",
+            (park_name,)
+        ).fetchone()
+
+        # Return lat and longitude
+        if row and row[0] is not None and row[1] is not None:
+            return (row[0], row[1])
+        return None
+
+    # Handle case where table doesn't exist
+    except sqlite3.OperationalError:
+        return None
+
+    # Close DB Connection
+    finally:
+        conn.close()
 
 
 def get_hike_history(db_path: Path = DB_PATH) -> list[dict]:

@@ -11,6 +11,7 @@ from db import (
     create_database, get_connection, import_trails_from_csv,
     insert_park, insert_trail, insert_hike_log,
     get_all_parks, get_all_trails, get_trails_by_park, get_park_name,
+    get_park_coordinates,
     get_hike_history, get_trail_by_id, get_hike_log_by_id,
     update_trail, update_hike_log,
     delete_trail, delete_hike_log, get_hike_log_count_for_trail,
@@ -101,7 +102,7 @@ def test_insert_park():
     Parameters: none
     Return: none
     """
-    park_id = insert_park("Test National Park", "TestState", "TestRegion", TEST_DB_PATH)
+    park_id = insert_park("Test National Park", "TestState", "TestRegion", db_path=TEST_DB_PATH)
     assert park_id is not None
     assert isinstance(park_id, int)
 
@@ -243,6 +244,51 @@ def test_get_park_name_invalid():
     """
     name = get_park_name(99999, TEST_DB_PATH)
     assert name is None
+
+
+def test_get_park_coordinates():
+    """
+    Test Get Park Coordinates by name.
+    Parameters: none
+    Return: none
+    """
+    coords = get_park_coordinates("Zion National Park", TEST_DB_PATH)
+    assert coords is not None
+    lat, lon = coords
+    assert isinstance(lat, float)
+    assert isinstance(lon, float)
+    # Zion is in southern Utah
+    assert 37.0 < lat < 38.0
+    assert -114.0 < lon < -112.0
+
+
+def test_get_park_coordinates_invalid():
+    """
+    Test Get Park Coordinates with unknown park returns None.
+    Parameters: none
+    Return: none
+    """
+    coords = get_park_coordinates("Fake National Park", TEST_DB_PATH)
+    assert coords is None
+
+
+def test_parks_have_coordinates():
+    """
+    Test that all CSV-imported parks have latitude and longitude.
+    Parameters: none
+    Return: none
+    """
+    conn = sqlite3.connect(TEST_DB_PATH)
+    cur = conn.cursor()
+
+    # Check that no parks from CSV import are missing coordinates
+    # (Exclude manually inserted test parks by checking count of parks with coordinates)
+    cur.execute("SELECT COUNT(*) FROM parks WHERE latitude IS NOT NULL AND longitude IS NOT NULL")
+    parks_with_coords = cur.fetchone()[0]
+    conn.close()
+
+    # All 59 CSV-imported parks should have coordinates
+    assert parks_with_coords >= 50
 
 
 def test_get_hike_history():

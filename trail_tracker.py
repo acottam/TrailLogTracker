@@ -11,7 +11,7 @@ Date: July 2026
 # Imports
 from datetime import date
 import db
-from weather import get_weather, PARK_COORDS
+from weather import get_weather
 
 
 # --- Display Functions ---
@@ -483,7 +483,7 @@ def view_trails_by_park():
 def show_weather():
     """
     Prompt user to select a park and display current weather.
-    If the park does not have coordinates in PARK_COORDS, inform the user.
+    Coordinates are queried from the database.
     """
     print("\n--- Park Weather Lookup ---")
 
@@ -504,12 +504,6 @@ def show_weather():
     park_name = db.get_park_name(park_id)
     if not park_name:
         print("Error: Park not found.")
-        return
-
-    # Check if coordinates are available
-    if park_name not in PARK_COORDS:
-        print(f"Error: No coordinates available for '{park_name}'.")
-        print("Add coordinates to PARK_COORDS in weather.py.")
         return
 
     # Fetch weather

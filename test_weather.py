@@ -2,9 +2,32 @@
 Author: Adam Cottam
 Purpose: CSE 310 Module 2 - Trail Log Tracker
 """
+from pathlib import Path
 from weather import calculate_wind_chill, calculate_heat_index, get_weather, PARK_COORDS
+from db import create_database, import_trails_from_csv, DB_PATH
 import pytest
 from pytest import approx
+
+
+def setup_module():
+    """
+    Ensure database exists with park data for weather coordinate lookups.
+    Parameters: none
+    Return: none
+    """
+    if not DB_PATH.exists():
+        create_database()
+        import_trails_from_csv()
+
+
+def teardown_module():
+    """
+    Clean up database after tests.
+    Parameters: none
+    Return: none
+    """
+    if DB_PATH.exists():
+        DB_PATH.unlink()
 
 
 def test_calculate_wind_chill_valid():

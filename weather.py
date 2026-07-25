@@ -9,6 +9,7 @@ from __future__ import annotations
 import requests
 from datetime import datetime, timezone
 from typing import Optional
+from db import get_park_coordinates
 
 
 # National Park Coordinates (lat, lon)
@@ -128,13 +129,17 @@ def get_weather(park_name: str) -> dict:
     Parameters: park_name (str) - The park to fetch weather for.
     Returns: dictionary - The weather data.
     """
-    # Check if park is in coordinates list
-    if park_name not in PARK_COORDS:
-        # Raise ValueError if park is not found
-        raise ValueError(f"Unknown park '{park_name}'. Add it to PARK_COORDS in weather.py.")
+    # Query coordinates from database first
+    park_coords = get_park_coordinates(park_name)
+
+    # Fallback to hardcoded coordinates if not in database
+    if not park_coords:
+        if park_name not in PARK_COORDS:
+            raise ValueError(f"Unknown park '{park_name}'. Park not found in database or PARK_COORDS.")
+        park_coords = PARK_COORDS[park_name]
 
     # Lat and Long Coordinates
-    lat, lon = PARK_COORDS[park_name]
+    lat, lon = park_coords
 
     # URL for API
     url = (
