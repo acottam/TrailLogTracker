@@ -392,11 +392,16 @@ def remove_trail():
 
     # Get trail ID
     try:
-        trail_id = int(input("\nTrail ID to delete: "))
+        trail_id = int(input("\nTrail ID to delete (0 to cancel): "))
 
     # Validate trail ID
     except ValueError:
         print("Error: Invalid trail ID.")
+        return
+
+    # Cancel
+    if trail_id == 0:
+        print("Delete cancelled.")
         return
 
     # Get trail info
@@ -440,11 +445,16 @@ def remove_hike_log():
 
     # Get log ID
     try:
-        log_id = int(input("\nLog ID to delete: "))
+        log_id = int(input("\nLog ID to delete (0 to cancel): "))
 
     # Validate log ID
     except ValueError:
         print("Error: Invalid log ID.")
+        return
+
+    # Cancel
+    if log_id == 0:
+        print("Delete cancelled.")
         return
 
     # Find the log in our results for display
@@ -476,9 +486,14 @@ def remove_park():
     display_parks(db.get_all_parks())
 
     try:
-        park_id = int(input("\nPark ID to delete: "))
+        park_id = int(input("\nPark ID to delete (0 to cancel): "))
     except ValueError:
         print("Error: Invalid park ID.")
+        return
+
+    # Cancel
+    if park_id == 0:
+        print("Delete cancelled.")
         return
 
     # Get park info
