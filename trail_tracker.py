@@ -448,9 +448,9 @@ def main_menu():
 
 def main():
     """Main application entry point."""
-    # Initialize database and seed data
+    # Initialize database and load data from CSV
     db.create_database()
-    db.seed_data()
+    db.import_trails_from_csv()
 
     # Main loop
     while True:

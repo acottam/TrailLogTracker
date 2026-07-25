@@ -7,9 +7,11 @@ Description: Database operations for the Trail Log Tracker application.
 # Imports
 import sqlite3
 from pathlib import Path
+import csv
 
 # Constants
 DB_PATH = Path(__file__).parent / "trail_tracker.db"
+CSV_PATH = Path(__file__).parent / "trails.csv"
 
 # Create `parks` Table
 CREATE_PARKS_SQL = """
@@ -156,6 +158,110 @@ def seed_data(db_path: Path = DB_PATH):
 
     # Close DB Connection
     finally:
+        conn.close()
+
+
+def import_trails_from_csv(csv_path: Path = CSV_PATH, db_path: Path = DB_PATH, truncate=False):
+    """
+    Import parks and trails from CSV into DB.
+    Parameters: csv_path, db_path, truncate
+    Return: none
+    """
+    # DB Connection
+    conn = get_connection(db_path)
+
+    try:
+        # Verifies tables are created
+        with conn:
+            conn.execute(CREATE_PARKS_SQL)
+            conn.execute(CREATE_TRAILS_SQL)
+            conn.execute(CREATE_HIKE_LOGS_SQL)
+
+        # Truncate Tables if True
+        if truncate:
+            with conn:
+                conn.execute("DELETE FROM hike_logs")
+                conn.execute("DELETE FROM trails")
+                conn.execute("DELETE FROM parks")
+
+        # Check if data already exists
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM parks")
+        if cursor.fetchone()[0] > 0 and not truncate:
+            return
+
+        # Read File
+        with conn, open(csv_path, newline="", encoding="utf-8") as f:
+
+            # CSV Reader
+            reader = csv.DictReader(f)
+
+            # Track parks to avoid duplicates
+            parks_added = {}
+
+            # Build trail rows
+            trail_rows = []
+
+            for row in reader:
+                park_name = row["park_name"].strip()
+                state = row["state"].strip()
+                region = row["region"].strip()
+
+                # Insert park if not already added
+                if park_name not in parks_added:
+                    cursor.execute(
+                        "INSERT INTO parks (park_name, state, region) VALUES (?, ?, ?)",
+                        (park_name, state, region)
+                    )
+                    parks_added[park_name] = cursor.lastrowid
+
+                # Get park_id
+                park_id = parks_added[park_name]
+
+                # Add trail row
+                trail_rows.append((
+                    row["trail_name"].strip(),
+                    park_id,
+                    float(row["distance_miles"]),
+                    int(row["elevation_gain_ft"]),
+                    row["difficulty"].strip(),
+                ))
+
+            # Insert all trails
+            conn.executemany(
+                "INSERT INTO trails (trail_name, park_id, distance_miles, elevation_gain_ft, difficulty) VALUES (?, ?, ?, ?, ?)",
+                trail_rows
+            )
+
+        print(f"Imported {len(parks_added)} parks and {len(trail_rows)} trails from CSV.")
+
+    # File Not Found Error
+    except FileNotFoundError as e:
+        print(f"Error: CSV file not found: {csv_path}")
+
+    # SQLite Integrity Error
+    except sqlite3.IntegrityError as e:
+        print(f"Error: Integrity error while importing trails: {e}")
+
+    # SQLite Error
+    except sqlite3.Error as e:
+        print(f"Error: SQLite error while importing trails: {e}")
+
+    # CSV Error
+    except csv.Error as e:
+        print(f"Error reading CSV file: {e}")
+
+    # Value Error - If issue converting into float/int
+    except ValueError as e:
+        print(f"Error converting value: {e}")
+
+    # General Error
+    except Exception as e:
+        print(f"Error: An unexpected error occurred: {e}")
+
+    # Final items
+    finally:
+        # Close DB Connection
         conn.close()
 
 
